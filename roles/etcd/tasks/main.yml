@@ -1,0 +1,108 @@
+---
+# tasks file for etcd
+- name: ensure service user is created
+  ansible.builtin.user:
+    name: "{{ service_user}}"
+    create_home: false
+    system: true
+    shell: /usr/bin/false 
+  
+- name: ensure service folders are created
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    state: directory
+    mode: "0700"
+  with_items:
+    - "{{ service_home }}"
+    - "{{ service_data }}"
+
+- name: check service.tar.gz status
+  ansible.builtin.stat:
+    path: "{{ service_home }}/{{ service_name }}-{{ service_version }}-{{ service_os_arch }}.tar.gz"
+  register: service_tar_gz_stat
+
+- name: ensure service tar gz is downloaded (timeout={{ download_timeout }}s)
+  ansible.builtin.get_url:
+    url: "{{ service_tar_gz_url }}"
+    dest: "{{ service_home }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    timeout: "{{ download_timeout }}"
+  when: not service_tar_gz_stat.stat.exists
+
+- name: ensure service version directory is created
+  ansible.builtin.file:
+    name: "{{ service_home }}/{{ service_name }}-{{ service_version }}-{{ service_os_arch}}"
+    state: directory
+    mode: "0750"
+
+- name: ensure service tar gz is unarchived
+  ansible.builtin.unarchive:
+    creates: "{{ service_home }}/{{ service_name }}-{{ service_version }}-{{ service_os_arch }}/{{ service_name }}"
+    src: "{{ service_home }}/{{ service_name }}-{{ service_version }}-{{ service_os_arch }}.tar.gz"
+    dest: "{{ service_home }}/{{ service_name }}-{{ service_version }}-{{ service_os_arch}}"
+    extra_opts: [--strip-components=1]
+    remote_src: true
+
+- name: ensure etcd ssl is installed
+  ansible.builtin.copy:
+    src: opt/etcd/ssl
+    dest: "{{ service_home }}"
+    owner: "{{ service_user }}"
+
+- name: check current version of the service
+  ansible.builtin.stat:
+    path: "{{ service_home }}/current"
+  register: service_current_stat
+
+- name: ensure service is stopped before doing upgrade
+  service:
+    name: "{{ service_name }}"
+    state: stopped
+  when: upgrade is defined
+
+- name: link service current version to "{{ service_version }}"
+  ansible.builtin.file:
+    src: "{{ service_home }}/{{ service_name }}-{{ service_version }}-{{ service_os_arch}}"
+    dest: "{{ service_home }}/current"
+    state: link
+  when: not service_current_stat.stat.exists or upgrade is defined
+
+- name: ensure service's directory permission is correct
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    state: directory
+    recurse: true
+  with_items:
+    - "{{ service_home }}"
+    - "{{ service_data }}"
+
+- name: ensure service systemd is installed
+  ansible.builtin.template:
+    src: "lib/systemd/system/service.j2"
+    dest: /lib/systemd/system/{{ service_name }}.service
+    owner: root
+    group: root
+    mode: "0755"
+  notify: systemctl daemon-reload
+
+- name: ensure service default env file is installed
+  ansible.builtin.template:
+    src: "etc/default/service.j2"
+    dest: /etc/default/{{ service_name }}
+  notify: restart {{ service_name }}
+  tags: 
+    - config_service
+
+- name: ensure service is onboot and running
+  ansible.builtin.service:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+  
+    
+  

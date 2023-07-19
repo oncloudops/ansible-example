@@ -1,0 +1,14 @@
+etcd:
+  hosts:
+    node01:
+      ansible_host: 192.168.64.11
+    node02:
+      ansible_host: 192.168.64.12
+    node03:
+      ansible_host: 192.168.64.13
+
+dev:
+  children:
+    etcd:
+  vars:
+    ETCD_INITIAL_CLUSTER_TOKEN: etcd-cluster01

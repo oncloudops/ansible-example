@@ -1,0 +1,12 @@
+---
+# vars file for etcd
+service_name: etcd
+service_user: etcd
+service_home: /opt/etcd
+service_data: /opt/etcd/data
+service_version: v3.4.27
+service_os_arch: linux-amd64
+service_tar_gz_url: |
+  https://github.com/etcd-io/etcd/releases/download/{{ service_version }}/etcd-{{ service_version }}-{{ service_os_arch }}.tar.gz
+
+download_timeout: 120

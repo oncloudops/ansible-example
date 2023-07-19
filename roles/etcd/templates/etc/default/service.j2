@@ -1,0 +1,23 @@
+#  Managed by Ansible 
+# By default, this file should be stored in /etc/default/etcd
+
+ETCD_NAME="{{ ansible_hostname }}"
+ETCD_DATA_DIR="{{ service_data }}"
+ETCD_LISTEN_PEER_URLS="https://{{hostvars[inventory_hostname].ansible_all_ipv4_addresses[0]}}:2380"
+ETCD_LISTEN_CLIENT_URLS="https://{{hostvars[inventory_hostname].ansible_all_ipv4_addresses[0]}}:2379,https://{{hostvars[inventory_hostname].ansible_all_ipv4_addresses[0]}}:4001"
+ETCD_MAX_SNAPSHOTS="15"
+ETCD_MAX_WALS="15"
+ETCD_INITIAL_ADVERTISE_PEER_URLS="https://{{hostvars[inventory_hostname].ansible_all_ipv4_addresses[0]}}:2380"
+ETCD_INITIAL_CLUSTER="{%for host in groups['etcd']%}{{host.split(".")[0]}}=https://{{hostvars[host].ansible_all_ipv4_addresses[0]}}:2380{% if not loop.last %},{% endif %}{% endfor %}"
+ETCD_INITIAL_CLUSTER_STATE="new"
+ETCD_INITIAL_CLUSTER_TOKEN="{{ ETCD_INITIAL_CLUSTER_TOKEN }}"
+ETCD_ADVERTISE_CLIENT_URLS="{%for host in groups['etcd']%}https://{{hostvars[host].ansible_all_ipv4_addresses[0]}}:2380{% if not loop.last %},{% endif %}{% endfor %}"
+#ETCD_PEER_AUTO_TLS=true
+#ETCD_AUTO_TLS=true
+ETCD_CERT_FILE="/opt/etcd/ssl/etcd_cert.pem"
+ETCD_KEY_FILE="/opt/etcd/ssl/etcd_key.pem"
+ETCD_PEER_TRUSTED_CA_FILE="/opt/etcd/ssl/ca_cert.pem"
+ETCD_PEER_CERT_FILE="/opt/etcd/ssl/etcd_cert.pem"
+ETCD_PEER_KEY_FILE="/opt/etcd/ssl/etcd_key.pem"
+ETCD_PEER_CLIENT_CERT_AUTH=true
+ETCD_AUTO_COMPACTION_RETENTION="7"
